@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Snow Canyon Email Invites</title>
+  <meta name="description" content="Admin utility to copy email invite lists." />
+
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.14);
+      --text: rgba(255, 255, 255, 0.92);
+      --muted: rgba(255, 255, 255, 0.72);
+      --danger: #ff5a6b;
+      --ok: #44d07b;
+      --btn: rgba(255, 255, 255, 0.10);
+      --btnHover: rgba(255, 255, 255, 0.16);
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+    }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      font-family: var(--sans);
+      background: radial-gradient(900px 600px at 20% 10%, rgba(95, 170, 255, 0.14), transparent 60%),
+                  radial-gradient(900px 600px at 80% 20%, rgba(255, 120, 200, 0.12), transparent 60%),
+                  radial-gradient(900px 600px at 50% 100%, rgba(68, 208, 123, 0.10), transparent 65%),
+                  var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      height: 100%;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      box-sizing: border-box;
+    }
+
+    .card {
+      width: min(720px, 94vw);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 22px;
+      box-sizing: border-box;
+      backdrop-filter: blur(10px);
+    }
+
+    .header {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 20px;
+      margin: 0;
+      letter-spacing: 0.2px;
+    }
+
+    .sub {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 16px;
+      align-items: center;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: var(--btn);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 650;
+      letter-spacing: 0.2px;
+      transition: background 160ms ease, transform 80ms ease;
+    }
+
+    button:hover { background: var(--btnHover); }
+    button:active { transform: translateY(1px); }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.20);
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+      min-height: 20px;
+      user-select: none;
+      word-break: break-word;
+    }
+
+    .status.ok { color: rgba(255,255,255,0.92); border-color: rgba(68, 208, 123, 0.35); }
+    .status.err { color: rgba(255,255,255,0.92); border-color: rgba(255, 90, 107, 0.40); }
+
+    /* Password gate overlay */
+    .gate {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(6, 10, 22, 0.78);
+      backdrop-filter: blur(10px);
+      z-index: 9999;
+      padding: 18px;
+      box-sizing: border-box;
+    }
+
+    .gate-card {
+      width: min(520px, 94vw);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 18px;
+      box-shadow: 0 22px 70px rgba(0,0,0,0.6);
+      padding: 22px;
+      box-sizing: border-box;
+    }
+
+    .gate-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .gate-title h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.2px;
+    }
+
+    .hint {
+      margin: 0 0 14px;
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    input[type="password"]{
+      flex: 1 1 240px;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.18);
+      background: rgba(0,0,0,0.24);
+      color: var(--text);
+      outline: none;
+      font-size: 14px;
+    }
+
+    .small {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: rgba(255,255,255,0.70);
+      margin-top: 10px;
+      user-select: none;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.55);
+      border: 1px solid rgba(255,255,255,0.18);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      box-shadow: 0 14px 40px rgba(0,0,0,0.55);
+      font-size: 13px;
+      max-width: min(740px, 92vw);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+      z-index: 10000;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(-2px);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Password Gate -->
+  <div id="gate" class="gate" aria-hidden="false">
+    <div class="gate-card" role="dialog" aria-modal="true" aria-label="Password required">
+      <div class="gate-title">
+        <h2>Snow Canyon Email Invites</h2>
+      </div>
+      <p class="hint">
+        Enter the password to access the email copy tool.
+        <br />
+        <span style="color: rgba(255,255,255,0.60);">Note: This is a light “gate” (client-side) for convenience, not strong security.</span>
+      </p>
+
+      <div class="input-row">
+        <input id="pw" type="password" placeholder="Password" autocomplete="current-password" />
+        <button id="unlockBtn">Unlock</button>
+      </div>
+
+      <div id="gateMsg" class="small" style="color: rgba(255,255,255,0.70);"></div>
+      <div class="small">Admins: copy invites after unlocking.</div>
+    </div>
+  </div>
+
+  <!-- Main App -->
+  <div class="wrap">
+    <div class="card">
+      <div class="header">
+        <div>
+          <h1>Email Invite Copier</h1>
+          <p class="sub">
+            Copies all unique emails from <span style="font-family: var(--mono);">member_locations_JSO.geojson</span>
+            to your clipboard (without showing them on screen).
+          </p>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="copyBtn" disabled>Copy Email Invites</button>
+        <button id="testBtn" disabled title="Checks that the GeoJSON is reachable (no emails displayed).">Test Connection</button>
+      </div>
+
+      <div id="status" class="status">Locked. Enter password to enable actions.</div>
+
+      <p class="sub" style="margin-top: 12px;">
+        Tip: After you click <b>Copy Email Invites</b>, paste directly into Google Calendar invites, Gmail BCC, etc.
+      </p>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    // -----------------------------
+    // Config
+    // -----------------------------
+    const PASSWORD = "Sn0W_Cany0N";
+
+    // Raw GitHub URL (public). This is where the page fetches the GeoJSON.
+    const GEOJSON_URL = "https://raw.githubusercontent.com/kdidso/snow-canyon-map/main/member_locations_JSO.geojson";
+
+    // Field name inside GeoJSON feature properties
+    const EMAIL_FIELD = "Emails";
+
+    // -----------------------------
+    // UI helpers
+    // -----------------------------
+    const gate = document.getElementById("gate");
+    const pwInput = document.getElementById("pw");
+    const unlockBtn = document.getElementById("unlockBtn");
+    const gateMsg = document.getElementById("gateMsg");
+
+    const copyBtn = document.getElementById("copyBtn");
+    const testBtn = document.getElementById("testBtn");
+    const statusBox = document.getElementById("status");
+    const toast = document.getElementById("toast");
+
+    function setStatus(msg, kind) {
+      statusBox.textContent = msg;
+      statusBox.classList.remove("ok", "err");
+      if (kind === "ok") statusBox.classList.add("ok");
+      if (kind === "err") statusBox.classList.add("err");
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      toast.textContent = msg;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+    }
+
+    function unlock() {
+      const entered = pwInput.value || "";
+      if (entered === PASSWORD) {
+        gate.style.display = "none";
+        gate.setAttribute("aria-hidden", "true");
+        copyBtn.disabled = false;
+        testBtn.disabled = false;
+        setStatus("Unlocked. Ready.", "ok");
+        showToast("Unlocked");
+        // Optional: remember unlocked for this browser session only
+        try { sessionStorage.setItem("sc_invites_unlocked", "1"); } catch (e) {}
+        return true;
+      } else {
+        gateMsg.textContent = "Incorrect password.";
+        gateMsg.style.color = "rgba(255, 90, 107, 0.95)";
+        pwInput.focus();
+        pwInput.select();
+        return false;
+      }
+    }
+
+    unlockBtn.addEventListener("click", unlock);
+    pwInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") unlock();
+    });
+
+    // Restore session unlock if present
+    try {
+      if (sessionStorage.getItem("sc_invites_unlocked") === "1") {
+        gate.style.display = "none";
+        gate.setAttribute("aria-hidden", "true");
+        copyBtn.disabled = false;
+        testBtn.disabled = false;
+        setStatus("Unlocked (session). Ready.", "ok");
+      }
+    } catch (e) {}
+
+    // -----------------------------
+    // GeoJSON / email extraction
+    // -----------------------------
+    function normalizeEmail(s) {
+      return String(s || "").trim();
+    }
+
+    function looksLikeEmail(s) {
+      // Not perfect, but good for basic validation
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+    }
+
+    async function fetchGeoJSON() {
+      const resp = await fetch(GEOJSON_URL, { cache: "no-store" });
+      if (!resp.ok) {
+        throw new Error(`GeoJSON fetch failed (${resp.status})`);
+      }
+      const data = await resp.json();
+      if (!data || !Array.isArray(data.features)) {
+        throw new Error("GeoJSON does not look like a FeatureCollection with features[]");
+      }
+      return data;
+    }
+
+    function collectUniqueEmails(geojson) {
+      const set = new Set();
+      for (const f of geojson.features) {
+        const props = (f && f.properties) ? f.properties : null;
+        if (!props) continue;
+
+        const raw = props[EMAIL_FIELD];
+        const email = normalizeEmail(raw);
+        if (!email) continue;
+
+        // Allow multiple emails in one field separated by commas/semicolons just in case
+        const parts = email.split(/[;,]/g).map(p => p.trim()).filter(Boolean);
+        for (const p of parts) {
+          if (looksLikeEmail(p)) set.add(p);
+        }
+      }
+      return Array.from(set).sort((a, b) => a.localeCompare(b));
+    }
+
+    async function copyEmailsToClipboard() {
+      copyBtn.disabled = true;
+      setStatus("Fetching emails…", null);
+
+      try {
+        const geojson = await fetchGeoJSON();
+        const emails = collectUniqueEmails(geojson);
+
+        if (!emails.length) {
+          setStatus(`Fetched GeoJSON, but found 0 valid emails in properties.${EMAIL_FIELD}.`, "err");
+          showToast("No emails found");
+          return;
+        }
+
+        const payload = emails.join(", ");
+
+        // Clipboard API requires HTTPS (GitHub Pages is HTTPS).
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(payload);
+        } else {
+          // Fallback for older browsers
+          const ta = document.createElement("textarea");
+          ta.value = payload;
+          ta.style.position = "fixed";
+          ta.style.left = "-9999px";
+          ta.style.top = "0";
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          const ok = document.execCommand("copy");
+          document.body.removeChild(ta);
+          if (!ok) throw new Error("Clipboard copy failed (fallback)");
+        }
+
+        setStatus(`Copied ${emails.length} unique emails to clipboard.`, "ok");
+        showToast(`Copied ${emails.length} emails`);
+      } catch (err) {
+        console.error(err);
+        setStatus(`Error: ${err.message}`, "err");
+        showToast("Copy failed");
+      } finally {
+        copyBtn.disabled = false;
+      }
+    }
+
+    async function testConnection() {
+      testBtn.disabled = true;
+      setStatus("Testing GeoJSON connection…", null);
+      try {
+        const geojson = await fetchGeoJSON();
+        const count = Array.isArray(geojson.features) ? geojson.features.length : 0;
+        setStatus(`Connection OK. Loaded ${count} features (emails not displayed).`, "ok");
+        showToast("Connection OK");
+      } catch (err) {
+        console.error(err);
+        setStatus(`Connection failed: ${err.message}`, "err");
+        showToast("Connection failed");
+      } finally {
+        testBtn.disabled = false;
+      }
+    }
+
+    copyBtn.addEventListener("click", copyEmailsToClipboard);
+    testBtn.addEventListener("click", testConnection);
+  </script>
+</body>
+</html>
