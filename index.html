@@ -13,8 +13,6 @@
       --border: rgba(255, 255, 255, 0.14);
       --text: rgba(255, 255, 255, 0.92);
       --muted: rgba(255, 255, 255, 0.72);
-      --danger: #ff5a6b;
-      --ok: #44d07b;
       --btn: rgba(255, 255, 255, 0.10);
       --btnHover: rgba(255, 255, 255, 0.16);
       --shadow: 0 18px 60px rgba(0, 0, 0, 0.55);
@@ -43,7 +41,7 @@
     }
 
     .card {
-      width: min(720px, 94vw);
+      width: min(760px, 94vw);
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
@@ -53,19 +51,8 @@
       backdrop-filter: blur(10px);
     }
 
-    .header {
-      display: flex;
-      gap: 14px;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    h1 {
-      font-size: 20px;
-      margin: 0;
-      letter-spacing: 0.2px;
-    }
+    .header { margin-bottom: 12px; }
+    h1 { font-size: 20px; margin: 0; letter-spacing: 0.2px; }
 
     .sub {
       margin: 6px 0 0;
@@ -97,10 +84,7 @@
 
     button:hover { background: var(--btnHover); }
     button:active { transform: translateY(1px); }
-    button:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
+    button:disabled { opacity: 0.55; cursor: not-allowed; }
 
     .status {
       margin-top: 14px;
@@ -142,26 +126,8 @@
       box-sizing: border-box;
     }
 
-    .gate-title {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-
-    .gate-title h2 {
-      margin: 0;
-      font-size: 18px;
-      letter-spacing: 0.2px;
-    }
-
-    .hint {
-      margin: 0 0 14px;
-      font-size: 13px;
-      color: var(--muted);
-      line-height: 1.45;
-    }
+    .gate-title h2 { margin: 0; font-size: 18px; letter-spacing: 0.2px; }
+    .hint { margin: 10px 0 14px; font-size: 13px; color: var(--muted); line-height: 1.45; }
 
     .input-row {
       display: flex;
@@ -207,10 +173,20 @@
       transition: opacity 180ms ease, transform 180ms ease;
       z-index: 10000;
     }
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(-2px);
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-2px); }
+
+    .tips {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(0,0,0,0.16);
+      color: rgba(255,255,255,0.78);
+      font-size: 13px;
+      line-height: 1.4;
     }
+    .tips b { color: rgba(255,255,255,0.92); }
+    .tips code { font-family: var(--mono); font-size: 12px; }
   </style>
 </head>
 
@@ -224,7 +200,7 @@
       <p class="hint">
         Enter the password to access the email copy tool.
         <br />
-        <span style="color: rgba(255,255,255,0.60);">Note: copied emails are not initially displayed.</span>
+        <span style="color: rgba(255,255,255,0.60);">This is a light client-side gate for convenience.</span>
       </p>
 
       <div class="input-row">
@@ -232,7 +208,7 @@
         <button id="unlockBtn">Unlock</button>
       </div>
 
-      <div id="gateMsg" class="small" style="color: rgba(255,255,255,0.70);"></div>
+      <div id="gateMsg" class="small"></div>
       <div class="small">Admins: copy invites after unlocking.</div>
     </div>
   </div>
@@ -241,25 +217,28 @@
   <div class="wrap">
     <div class="card">
       <div class="header">
-        <div>
-          <h1>Email Invite Copier</h1>
-          <p class="sub">
-            Copies all unique emails from <span style="font-family: var(--mono);">Ward Roster</span>
-            to your clipboard (without showing them on screen).
-          </p>
-        </div>
+        <h1>Email Invite Copier</h1>
+        <p class="sub">
+          Copies all unique emails from
+          <span style="font-family: var(--mono);">Ward Roster</span>
+          to your clipboard (without showing them on screen).
+        </p>
       </div>
 
       <div class="row">
-        <button id="copyBtn" disabled>Copy Email Invites</button>
+        <button id="copyMobileBtn" disabled>Copy for Mobile (one per line)</button>
+        <button id="copyDesktopBtn" disabled>Copy for Desktop (comma list)</button>
+        <button id="copySemiBtn" disabled title="Some mobile apps parse semicolons better.">Copy (semicolon list)</button>
         <button id="testBtn" disabled title="Checks that the GeoJSON is reachable (no emails displayed).">Test Connection</button>
       </div>
 
       <div id="status" class="status">Locked. Enter password to enable actions.</div>
 
-      <p class="sub" style="margin-top: 12px;">
-        Tip: After you click <b>Copy Email Invites</b>, paste directly into Google Calendar invites, Gmail BCC, etc.
-      </p>
+      <div class="tips">
+        <b>If Google Calendar mobile still won’t split the list:</b><br/>
+        After pasting, try tapping space/enter once, or use the <b>semicolon</b> button.
+        Some versions of the app are picky about separators.
+      </div>
     </div>
   </div>
 
@@ -271,7 +250,7 @@
     // -----------------------------
     const PASSWORD = "Sn0W_Cany0N";
 
-    // Raw GitHub URL (public). This is where the page fetches the GeoJSON.
+    // Raw GitHub URL (public).
     const GEOJSON_URL = "https://raw.githubusercontent.com/kdidso/snow-canyon-map/main/member_locations_JSO.geojson";
 
     // Field name inside GeoJSON feature properties
@@ -285,8 +264,11 @@
     const unlockBtn = document.getElementById("unlockBtn");
     const gateMsg = document.getElementById("gateMsg");
 
-    const copyBtn = document.getElementById("copyBtn");
+    const copyMobileBtn = document.getElementById("copyMobileBtn");
+    const copyDesktopBtn = document.getElementById("copyDesktopBtn");
+    const copySemiBtn = document.getElementById("copySemiBtn");
     const testBtn = document.getElementById("testBtn");
+
     const statusBox = document.getElementById("status");
     const toast = document.getElementById("toast");
 
@@ -310,11 +292,15 @@
       if (entered === PASSWORD) {
         gate.style.display = "none";
         gate.setAttribute("aria-hidden", "true");
-        copyBtn.disabled = false;
+
+        copyMobileBtn.disabled = false;
+        copyDesktopBtn.disabled = false;
+        copySemiBtn.disabled = false;
         testBtn.disabled = false;
+
         setStatus("Unlocked. Ready.", "ok");
         showToast("Unlocked");
-        // Optional: remember unlocked for this browser session only
+
         try { sessionStorage.setItem("sc_invites_unlocked", "1"); } catch (e) {}
         return true;
       } else {
@@ -331,12 +317,13 @@
       if (e.key === "Enter") unlock();
     });
 
-    // Restore session unlock if present
     try {
       if (sessionStorage.getItem("sc_invites_unlocked") === "1") {
         gate.style.display = "none";
         gate.setAttribute("aria-hidden", "true");
-        copyBtn.disabled = false;
+        copyMobileBtn.disabled = false;
+        copyDesktopBtn.disabled = false;
+        copySemiBtn.disabled = false;
         testBtn.disabled = false;
         setStatus("Unlocked (session). Ready.", "ok");
       }
@@ -350,15 +337,12 @@
     }
 
     function looksLikeEmail(s) {
-      // Not perfect, but good for basic validation
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
     }
 
     async function fetchGeoJSON() {
       const resp = await fetch(GEOJSON_URL, { cache: "no-store" });
-      if (!resp.ok) {
-        throw new Error(`GeoJSON fetch failed (${resp.status})`);
-      }
+      if (!resp.ok) throw new Error(`GeoJSON fetch failed (${resp.status})`);
       const data = await resp.json();
       if (!data || !Array.isArray(data.features)) {
         throw new Error("GeoJSON does not look like a FeatureCollection with features[]");
@@ -368,25 +352,51 @@
 
     function collectUniqueEmails(geojson) {
       const set = new Set();
+
       for (const f of geojson.features) {
         const props = (f && f.properties) ? f.properties : null;
         if (!props) continue;
 
         const raw = props[EMAIL_FIELD];
-        const email = normalizeEmail(raw);
-        if (!email) continue;
+        const emailCell = normalizeEmail(raw);
+        if (!emailCell) continue;
 
-        // Allow multiple emails in one field separated by commas/semicolons just in case
-        const parts = email.split(/[;,]/g).map(p => p.trim()).filter(Boolean);
+        // Support multiple in one cell separated by comma/semicolon just in case
+        const parts = emailCell.split(/[;,]/g).map(p => p.trim()).filter(Boolean);
         for (const p of parts) {
           if (looksLikeEmail(p)) set.add(p);
         }
       }
+
       return Array.from(set).sort((a, b) => a.localeCompare(b));
     }
 
-    async function copyEmailsToClipboard() {
-      copyBtn.disabled = true;
+    async function writeClipboard(text) {
+      // Clipboard API requires HTTPS (GitHub Pages is HTTPS).
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+
+      // Fallback
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.top = "0";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      if (!ok) throw new Error("Clipboard copy failed (fallback)");
+    }
+
+    async function copyEmails(format) {
+      copyMobileBtn.disabled = true;
+      copyDesktopBtn.disabled = true;
+      copySemiBtn.disabled = true;
+
       setStatus("Fetching emails…", null);
 
       try {
@@ -399,34 +409,34 @@
           return;
         }
 
-        const payload = emails.join(", ");
-
-        // Clipboard API requires HTTPS (GitHub Pages is HTTPS).
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(payload);
+        let payload = "";
+        if (format === "mobile") {
+          // One per line (best chance on mobile parsing)
+          payload = emails.join("\n") + "\n";
+        } else if (format === "semicolon") {
+          payload = emails.join("; ");
         } else {
-          // Fallback for older browsers
-          const ta = document.createElement("textarea");
-          ta.value = payload;
-          ta.style.position = "fixed";
-          ta.style.left = "-9999px";
-          ta.style.top = "0";
-          document.body.appendChild(ta);
-          ta.focus();
-          ta.select();
-          const ok = document.execCommand("copy");
-          document.body.removeChild(ta);
-          if (!ok) throw new Error("Clipboard copy failed (fallback)");
+          // Desktop-friendly comma list (no space is sometimes better; you can switch to "," if desired)
+          payload = emails.join(", ");
         }
 
-        setStatus(`Copied ${emails.length} unique emails to clipboard.`, "ok");
+        await writeClipboard(payload);
+
+        const label =
+          format === "mobile" ? "Mobile (one per line)" :
+          format === "semicolon" ? "Semicolon list" :
+          "Desktop (comma list)";
+
+        setStatus(`Copied ${emails.length} unique emails to clipboard (${label}).`, "ok");
         showToast(`Copied ${emails.length} emails`);
       } catch (err) {
         console.error(err);
         setStatus(`Error: ${err.message}`, "err");
         showToast("Copy failed");
       } finally {
-        copyBtn.disabled = false;
+        copyMobileBtn.disabled = false;
+        copyDesktopBtn.disabled = false;
+        copySemiBtn.disabled = false;
       }
     }
 
@@ -447,7 +457,9 @@
       }
     }
 
-    copyBtn.addEventListener("click", copyEmailsToClipboard);
+    copyMobileBtn.addEventListener("click", () => copyEmails("mobile"));
+    copyDesktopBtn.addEventListener("click", () => copyEmails("desktop"));
+    copySemiBtn.addEventListener("click", () => copyEmails("semicolon"));
     testBtn.addEventListener("click", testConnection);
   </script>
 </body>
