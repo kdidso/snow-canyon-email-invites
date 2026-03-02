@@ -200,7 +200,7 @@
       <p class="hint">
         Enter the password to access the email copy tool.
         <br />
-        <span style="color: rgba(255,255,255,0.60);">Note: copied emails are not initially shown.</span>
+        <span style="color: rgba(255,255,255,0.60);">Note: copied emails are not shown on screen.</span>
       </p>
 
       <div class="input-row">
@@ -219,25 +219,23 @@
       <div class="header">
         <h1>Email Invite Copier</h1>
         <p class="sub">
-          Copies all unique emails from
+          Copies unique emails from the
           <span style="font-family: var(--mono);">Ward Roster</span>
           to your clipboard (without showing them on screen).
         </p>
       </div>
 
       <div class="row">
-        <button id="copyMobileBtn" disabled>Copy for Mobile (one per line)</button>
-        <button id="copyDesktopBtn" disabled>Copy for Desktop (comma list)</button>
-        <button id="copySemiBtn" disabled title="Some mobile apps parse semicolons better.">Copy (semicolon list)</button>
+        <button id="copyRSBtn" disabled>Copy Relief Society invites</button>
+        <button id="copyAllBtn" disabled>Copy all ward invites</button>
+        <button id="copyEQBtn" disabled>Copy Elders Quorum invites</button>
         <button id="testBtn" disabled title="Checks that the GeoJSON is reachable (no emails displayed).">Test Connection</button>
       </div>
 
       <div id="status" class="status">Locked. Enter password to enable actions.</div>
 
       <div class="tips">
-        <b>If Google Calendar mobile still won’t split the list:</b><br/>
-        After pasting, try tapping space/enter once, or use the <b>semicolon</b> button.
-        Some versions of the app are picky about separators.
+        <b>Tip:</b> These lists are comma-separated for easy pasting into Google Calendar (desktop).
       </div>
     </div>
   </div>
@@ -253,8 +251,9 @@
     // Raw GitHub URL (public).
     const GEOJSON_URL = "https://raw.githubusercontent.com/kdidso/snow-canyon-map/main/member_locations_JSO.geojson";
 
-    // Field name inside GeoJSON feature properties
+    // Field names inside GeoJSON feature properties
     const EMAIL_FIELD = "Emails";
+    const GENDER_FIELD = "Gender"; // expects "F" or "M" (common). We handle common variants.
 
     // -----------------------------
     // UI helpers
@@ -264,9 +263,9 @@
     const unlockBtn = document.getElementById("unlockBtn");
     const gateMsg = document.getElementById("gateMsg");
 
-    const copyMobileBtn = document.getElementById("copyMobileBtn");
-    const copyDesktopBtn = document.getElementById("copyDesktopBtn");
-    const copySemiBtn = document.getElementById("copySemiBtn");
+    const copyRSBtn = document.getElementById("copyRSBtn");
+    const copyAllBtn = document.getElementById("copyAllBtn");
+    const copyEQBtn = document.getElementById("copyEQBtn");
     const testBtn = document.getElementById("testBtn");
 
     const statusBox = document.getElementById("status");
@@ -287,16 +286,20 @@
       toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
     }
 
+    function setButtonsEnabled(isEnabled) {
+      copyRSBtn.disabled = !isEnabled;
+      copyAllBtn.disabled = !isEnabled;
+      copyEQBtn.disabled = !isEnabled;
+      testBtn.disabled = !isEnabled;
+    }
+
     function unlock() {
       const entered = pwInput.value || "";
       if (entered === PASSWORD) {
         gate.style.display = "none";
         gate.setAttribute("aria-hidden", "true");
 
-        copyMobileBtn.disabled = false;
-        copyDesktopBtn.disabled = false;
-        copySemiBtn.disabled = false;
-        testBtn.disabled = false;
+        setButtonsEnabled(true);
 
         setStatus("Unlocked. Ready.", "ok");
         showToast("Unlocked");
@@ -321,10 +324,7 @@
       if (sessionStorage.getItem("sc_invites_unlocked") === "1") {
         gate.style.display = "none";
         gate.setAttribute("aria-hidden", "true");
-        copyMobileBtn.disabled = false;
-        copyDesktopBtn.disabled = false;
-        copySemiBtn.disabled = false;
-        testBtn.disabled = false;
+        setButtonsEnabled(true);
         setStatus("Unlocked (session). Ready.", "ok");
       }
     } catch (e) {}
@@ -340,6 +340,13 @@
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
     }
 
+    function normalizeGender(g) {
+      const v = String(g || "").trim().toUpperCase();
+      if (v === "F" || v === "FEMALE" || v === "WOMAN" || v === "W") return "F";
+      if (v === "M" || v === "MALE" || v === "MAN") return "M";
+      return ""; // unknown/blank
+    }
+
     async function fetchGeoJSON() {
       const resp = await fetch(GEOJSON_URL, { cache: "no-store" });
       if (!resp.ok) throw new Error(`GeoJSON fetch failed (${resp.status})`);
@@ -350,12 +357,17 @@
       return data;
     }
 
-    function collectUniqueEmails(geojson) {
+    function collectUniqueEmails(geojson, genderFilter /* "F" | "M" | null */) {
       const set = new Set();
 
       for (const f of geojson.features) {
         const props = (f && f.properties) ? f.properties : null;
         if (!props) continue;
+
+        if (genderFilter) {
+          const g = normalizeGender(props[GENDER_FIELD]);
+          if (g !== genderFilter) continue;
+        }
 
         const raw = props[EMAIL_FIELD];
         const emailCell = normalizeEmail(raw);
@@ -392,51 +404,38 @@
       if (!ok) throw new Error("Clipboard copy failed (fallback)");
     }
 
-    async function copyEmails(format) {
-      copyMobileBtn.disabled = true;
-      copyDesktopBtn.disabled = true;
-      copySemiBtn.disabled = true;
+    function disableCopyButtons(disabled) {
+      copyRSBtn.disabled = disabled;
+      copyAllBtn.disabled = disabled;
+      copyEQBtn.disabled = disabled;
+    }
 
+    async function copyEmailsForGroup(genderFilter, label) {
+      disableCopyButtons(true);
       setStatus("Fetching emails…", null);
 
       try {
         const geojson = await fetchGeoJSON();
-        const emails = collectUniqueEmails(geojson);
+        const emails = collectUniqueEmails(geojson, genderFilter);
 
         if (!emails.length) {
-          setStatus(`Fetched GeoJSON, but found 0 valid emails in properties.${EMAIL_FIELD}.`, "err");
+          const gLabel = genderFilter ? ` (${label})` : "";
+          setStatus(`Fetched GeoJSON, but found 0 valid emails${gLabel}.`, "err");
           showToast("No emails found");
           return;
         }
 
-        let payload = "";
-        if (format === "mobile") {
-          // One per line (best chance on mobile parsing)
-          payload = emails.join("\n") + "\n";
-        } else if (format === "semicolon") {
-          payload = emails.join("; ");
-        } else {
-          // Desktop-friendly comma list (no space is sometimes better; you can switch to "," if desired)
-          payload = emails.join(", ");
-        }
-
+        const payload = emails.join(", ");
         await writeClipboard(payload);
 
-        const label =
-          format === "mobile" ? "Mobile (one per line)" :
-          format === "semicolon" ? "Semicolon list" :
-          "Desktop (comma list)";
-
-        setStatus(`Copied ${emails.length} unique emails to clipboard (${label}).`, "ok");
+        setStatus(`Copied ${emails.length} emails (${label}).`, "ok");
         showToast(`Copied ${emails.length} emails`);
       } catch (err) {
         console.error(err);
         setStatus(`Error: ${err.message}`, "err");
         showToast("Copy failed");
       } finally {
-        copyMobileBtn.disabled = false;
-        copyDesktopBtn.disabled = false;
-        copySemiBtn.disabled = false;
+        disableCopyButtons(false);
       }
     }
 
@@ -457,9 +456,12 @@
       }
     }
 
-    copyMobileBtn.addEventListener("click", () => copyEmails("mobile"));
-    copyDesktopBtn.addEventListener("click", () => copyEmails("desktop"));
-    copySemiBtn.addEventListener("click", () => copyEmails("semicolon"));
+    // -----------------------------
+    // Button wiring
+    // -----------------------------
+    copyRSBtn.addEventListener("click", () => copyEmailsForGroup("F", "Relief Society"));
+    copyAllBtn.addEventListener("click", () => copyEmailsForGroup(null, "All Ward"));
+    copyEQBtn.addEventListener("click", () => copyEmailsForGroup("M", "Elders Quorum"));
     testBtn.addEventListener("click", testConnection);
   </script>
 </body>
